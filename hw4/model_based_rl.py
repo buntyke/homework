@@ -42,28 +42,43 @@ class ModelBasedRL(object):
         timeit.start('total')
 
     def _gather_rollouts(self, policy, num_rollouts):
+
+        # initialize dataset class
         dataset = utils.Dataset()
 
+        # loop for num_rollouts
         for _ in range(num_rollouts):
-            state = self._env.reset()
-            done = False
+
+            # reset gym env
             t = 0
+            done = False
+            state = self._env.reset()
+
+            # generate gym rollout
             while not done:
+                # perform rendering
                 if self._render:
                     timeit.start('render')
                     self._env.render()
                     timeit.stop('render')
+
+                # get action using MPC
                 timeit.start('get action')
                 action = policy.get_action(state)
                 timeit.stop('get action')
+
+                # step through environment
                 timeit.start('env step')
                 next_state, reward, done, _ = self._env.step(action)
                 timeit.stop('env step')
+
+                # add experience to dataset
                 done = done or (t >= self._max_rollout_length)
                 dataset.add(state, action, next_state, reward, done)
 
-                state = next_state
+                # update state variable
                 t += 1
+                state = next_state
 
         return dataset
 
@@ -78,29 +93,41 @@ class ModelBasedRL(object):
             (c) Use self._training_batch_size for iterating through the dataset
             (d) Keep track of the loss values by appending them to the losses array
         """
+
+        # timing for policy training
         timeit.start('train policy')
 
         losses = []
         ### PROBLEM 1
+
+        # loop for self._training_epochs
         for _ in range(self._training_epochs):
+
+            # iterate over dataset
             for states, actions, next_states, _, _ in \
                     dataset.random_iterator(self._training_batch_size):
 
+                # compute loss
                 loss = self._policy.train_step(states, actions, next_states)
                 losses.append(loss)
 
+        # perform logging
         logger.record_tabular('TrainingLossStart', losses[0])
         logger.record_tabular('TrainingLossFinal', losses[-1])
-
         timeit.stop('train policy')
 
     def _log(self, dataset):
+        # stop timing
         timeit.stop('total')
+
+        # print logging information
         dataset.log()
         logger.dump_tabular(print_func=logger.info)
         logger.debug('')
         for line in str(timeit).split('\n'):
             logger.debug(line)
+
+        # reset timing
         timeit.reset()
         timeit.start('total')
 
