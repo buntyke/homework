@@ -1,13 +1,11 @@
 import os
-from collections import defaultdict
+import pandas
 import logging
+import numpy as np
+from collections import defaultdict
 from colorlog import ColoredFormatter
 
-import pandas
-import numpy as np
-
 from tabulate import tabulate
-
 
 class LoggerClass(object):
     GLOBAL_LOGGER_NAME = '_global_logger'
