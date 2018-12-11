@@ -1,5 +1,6 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+from IPython.terminal.debugger import set_trace as keyboard
 
 import utils
 
@@ -70,21 +71,21 @@ class ModelBasedPolicy(object):
         ### PROBLEM 1
 
         # get dataset statistics
-        state_std = self._init_dataset.state_std()
-        state_mean = self._init_dataset.state_mean()
+        state_std = self._init_dataset.state_std
+        state_mean = self._init_dataset.state_mean
 
-        action_std = self._init_dataset.action_std()
-        action_mean = self._init_dataset.action_mean()
+        action_std = self._init_dataset.action_std
+        action_mean = self._init_dataset.action_mean
 
-        delta_state_std = self._init_dataset.delta_state_std()
-        delta_state_mean = self._init_dataset.delta_state_mean()
+        delta_state_std = self._init_dataset.delta_state_std
+        delta_state_mean = self._init_dataset.delta_state_mean
 
         # normalize input data
         state_norm = utils.normalize(state, state_mean, state_std)
         action_norm = utils.normalize(action, action_mean, action_std)
 
         # perform delta prediction
-        inp = np.hstack((state_norm, action_norm))
+        inp = tf.concat([state_norm, action_norm], 1)
         out = utils.build_mlp(inp, self._state_dim, 'policy', reuse=reuse)
 
         # perdict next state
@@ -120,8 +121,8 @@ class ModelBasedPolicy(object):
         pred_diff = next_state_pred - state_ph
 
         # get statistics
-        delta_state_std = self._init_dataset.delta_state_std()
-        delta_state_mean = self._init_dataset.delta_state_mean()
+        delta_state_std = self._init_dataset.delta_state_std
+        delta_state_mean = self._init_dataset.delta_state_mean
 
         # compute normalized values
         true_diff_norm = utils.normalize(true_diff, delta_state_mean, 
@@ -131,8 +132,9 @@ class ModelBasedPolicy(object):
 
         # compute loss and initialize optimization
         loss = tf.losses.mean_squared_error(true_diff_norm, 
-                                            pred_diff_norm, scope='loss')
-        optimizer = tf.train.AdamOptimizer(self._learning_rate)
+                                            pred_diff_norm, scope='policy')
+        optim = tf.train.AdamOptimizer(self._learning_rate)
+        optimizer = optim.minimize(loss)
         return loss, optimizer
 
     def _setup_action_selection(self, state_ph):
@@ -165,35 +167,24 @@ class ModelBasedPolicy(object):
         ### PROBLEM 2
 
         # initialize random action sequences
-        action_sequences = tf.random_uniform((self._num_random_action_selection, 
-                                             self._horizon, self._action_dim), 
+        action_sequences = tf.random_uniform((self._horizon, self._num_random_action_selection, 
+                                             self._action_dim), 
                                              minval=self._action_space_low, 
                                              maxval=self._action_space_high, 
                                              dtype=tf.float32)
 
-        # loop over action sequences
-        min_ind = -1
-        min_cost = 1e7
-        for n in range(self._num_random_action_selection):
-            # initialize variables per sequence
-            seq_cost = 0
-            seq_state = state_ph
+        # initialize variables per sequence
+        seq_cost = tf.tile([0.0],[self._num_random_action_selection])
+        seq_state = tf.tile(state_ph,[self._num_random_action_selection,1])
 
-            # roll-out sequence
-            for t in range(self._horizon):
-                seq_next_state = self._sess.run(self._next_state_pred, 
-                                    feed_dict={'state_ph':seq_state, 
-                                    'action_ph': action_sequences[n,t,:]})
+        # roll-out sequence
+        for t in range(self._horizon):
+            seq_next_state = self._dynamics_func(seq_state, action_sequences[t,:,:], reuse=tf.AUTO_REUSE)
+            seq_cost += self._cost_fn(seq_state, action_sequences[t,:,:], seq_next_state)
+            seq_state = seq_next_state
 
-                seq_cost += self._cost_fn(seq_state, 
-                                action_sequences[n,t,:], seq_next_state)
-                seq_state = seq_next_state
-
-            # check if cost is reduced
-            if seq_cost <= min_cost:
-                min_ind = n
-
-        best_action = action_sequences[min_ind,0,:]
+        min_ind = tf.argmin(seq_cost, 0)
+        best_action = action_sequences[0,min_ind,:]
         return best_action
 
     def _setup_graph(self):
@@ -209,7 +200,7 @@ class ModelBasedPolicy(object):
 
         # setup computation graph
         state_ph, action_ph, next_state_ph = self._setup_placeholders()
-        next_state_pred = self._dynamics_func(state_ph, action_ph, True)
+        next_state_pred = self._dynamics_func(state_ph, action_ph, tf.AUTO_REUSE)
         loss, optimizer = self._setup_training(state_ph, next_state_ph, 
                                                next_state_pred)
 
@@ -233,10 +224,9 @@ class ModelBasedPolicy(object):
         ### PROBLEM 1
 
         # perform loss computation
-        loss = self._sess.run(self._loss, feed_dict={'state_ph': states, 
-                            'action_ph': actions, 'next_state_ph': next_states})
-        self._optimizer.minimize(loss)
-
+        optim, loss = self._sess.run([self._optimizer,self._loss], feed_dict={self._state_ph: states, 
+                            self._action_ph: actions, self._next_state_ph: next_states})
+        
         return loss
 
     def predict(self, state, action):
@@ -256,8 +246,9 @@ class ModelBasedPolicy(object):
         ### PROBLEM 1
 
         # perform next state prediction
-        next_state_pred = self._sess.run(self._next_state_pred, 
-                            feed_dict={'state_ph': state, 'action_ph': action})
+        out = self._sess.run(self._next_state_pred, 
+                            feed_dict={self._state_ph: state[None,:], self._action_ph: action[None,:]})
+        next_state_pred = out[0,:]
 
         assert np.shape(next_state_pred) == (self._state_dim,)
         return next_state_pred
@@ -276,7 +267,7 @@ class ModelBasedPolicy(object):
 
         # perform best action selection
         best_action = self._sess.run(self._best_action, 
-                                     feed_dict={'state_ph': state})
+                             feed_dict={self._state_ph: state[None,:]})
 
         assert np.shape(best_action) == (self._action_dim,)
         return best_action
