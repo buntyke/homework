@@ -3,11 +3,6 @@ import tensorflow as tf
 
 from logger import logger
 
-
-############
-### Data ###
-############
-
 class Dataset(object):
 
     def __init__(self):
@@ -23,10 +18,6 @@ class Dataset(object):
 
     def __len__(self):
         return len(self._states)
-
-    ##################
-    ### Statistics ###
-    ##################
 
     @property
     def state_mean(self):
@@ -51,10 +42,6 @@ class Dataset(object):
     @property
     def delta_state_std(self):
         return np.std(np.array(self._next_states) - np.array(self._states), axis=0)
-
-    ###################
-    ### Adding data ###
-    ###################
 
     def add(self, state, action, next_state, reward, done):
         """
@@ -87,10 +74,6 @@ class Dataset(object):
         self._next_states += other_dataset._next_states
         self._rewards += other_dataset._rewards
         self._dones += other_dataset._dones
-
-    ############################
-    ### Iterate through data ###
-    ############################
 
     def rollout_iterator(self):
         """
@@ -131,10 +114,6 @@ class Dataset(object):
 
             i += batch_size
 
-    ###############
-    ### Logging ###
-    ###############
-
     def log(self):
         end_idxs = np.nonzero(self._dones)[0] + 1
 
@@ -151,10 +130,6 @@ class Dataset(object):
         logger.record_tabular('ReturnStd', np.std(returns))
         logger.record_tabular('ReturnMin', np.min(returns))
         logger.record_tabular('ReturnMax', np.max(returns))
-
-##################
-### Tensorflow ###
-##################
 
 def build_mlp(input_layer,
               output_dim,
@@ -176,10 +151,6 @@ def normalize(x, mean, std, eps=1e-8):
 
 def unnormalize(x, mean, std):
     return x * std + mean
-
-################
-### Policies ###
-################
 
 class RandomPolicy(object):
 

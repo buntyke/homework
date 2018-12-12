@@ -1,13 +1,13 @@
+# import modules
 import os
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-from model_based_policy import ModelBasedPolicy
+# import utilities
 import utils
-from logger import logger
 from timer import timeit
-
+from logger import logger
+from model_based_policy import ModelBasedPolicy
 
 class ModelBasedRL(object):
 
@@ -83,22 +83,11 @@ class ModelBasedRL(object):
         return dataset
 
     def _train_policy(self, dataset):
-        """
-        Train the model-based policy
-
-        implementation details:
-            (a) Train for self._training_epochs number of epochs
-            (b) The dataset.random_iterator(...)  method will iterate through 
-            the dataset once in a random order
-            (c) Use self._training_batch_size for iterating through the dataset
-            (d) Keep track of the loss values by appending them to the losses array
-        """
 
         # timing for policy training
         timeit.start('train policy')
 
         losses = []
-        ### PROBLEM 1
 
         # loop for self._training_epochs
         for _ in range(self._training_epochs):
@@ -132,29 +121,14 @@ class ModelBasedRL(object):
         timeit.start('total')
 
     def run_q1(self):
-        """
-        Train on a dataset, and see how good the learned dynamics 
-        model's predictions are.
 
-        implementation details:
-            (i) Train using the self._random_dataset
-            (ii) For each rollout, use the initial state and all actions 
-            to predict the future states. Store these predicted states in 
-            the pred_states list. NOTE: you should *not* be using any of 
-            the states in states[1:]. Only use states[0]
-            (iii) After predicting the future states, we have provided plotting 
-            code that plots the actual vs predicted states and saves these to 
-            the experiment's folder. You do not need to modify this code.
-        """
         logger.info('Training policy....')
-        ### PROBLEM 1
         self._train_policy(self._random_dataset)
 
         logger.info('Evaluating predictions...')
         for r_num, (states, actions, _, _, _) in enumerate(self._random_dataset.rollout_iterator()):
-            pred_states = []
 
-            ### PROBLEM 1
+            pred_states = []
             for state, action in zip(states, actions):
                 pred_states.append(self._policy.predict(state, action))
 
@@ -183,19 +157,13 @@ class ModelBasedRL(object):
         logger.info('All plots saved to folder')
 
     def run_q2(self):
-        """
-        Train the model-based policy on a random dataset, and evaluate the 
-        performance of the resulting policy
-        """
         logger.info('Random policy')
         self._log(self._random_dataset)
 
         logger.info('Training policy....')
-        ### PROBLEM 2
         self._train_policy(self._random_dataset)
 
         logger.info('Evaluating policy...')
-        ### PROBLEM 2
         eval_dataset = self._gather_rollouts(self._policy, 
                                              self._num_onpolicy_rollouts)
 
@@ -203,11 +171,6 @@ class ModelBasedRL(object):
         self._log(eval_dataset)
 
     def run_q3(self):
-        """
-        Starting with the random dataset, train the policy on the dataset, 
-        gather rollouts with the policy, append the new rollouts to the 
-        existing dataset, and repeat
-        """
         dataset = self._random_dataset
 
         itr = -1
@@ -219,16 +182,13 @@ class ModelBasedRL(object):
             logger.info('Iteration {0}'.format(itr))
             logger.record_tabular('Itr', itr)
 
-            ### PROBLEM 3
             logger.info('Training policy...')
             self._train_policy(dataset)
 
-            ### PROBLEM 3
             logger.info('Gathering rollouts...')
             new_dataset = self._gather_rollouts(self._policy, 
                                                 self._num_onpolicy_rollouts)
 
-            ### PROBLEM 3
             logger.info('Appending dataset...')
             dataset.append(new_dataset)
 

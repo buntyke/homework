@@ -44,10 +44,6 @@ class LoggerClass(object):
     def dir(self):
         return self._dir
 
-    #############
-    ### Setup ###
-    #############
-
     def setup(self, display_name, log_path, lvl):
         self._dir = os.path.dirname(log_path)
         self._logger = self._get_logger(LoggerClass.GLOBAL_LOGGER_NAME,
@@ -92,10 +88,6 @@ class LoggerClass(object):
 
         return logger
 
-    ###############
-    ### Logging ###
-    ###############
-
     def debug(self, s):
         assert (self._logger is not None)
         self._logger.debug(s)
@@ -115,10 +107,6 @@ class LoggerClass(object):
     def critical(self, s):
         assert (self._logger is not None)
         self._logger.critical(s)
-
-    ####################
-    ### Data logging ###
-    ####################
 
     def record_tabular(self, key, val):
         assert (str(key) not in self._curr_recorded)
@@ -156,6 +144,5 @@ class LoggerClass(object):
         ### write to file
         tabular_pandas = pandas.DataFrame({k: pandas.Series(v) for k, v in self._tabular.items()})
         tabular_pandas.to_csv(self._csv_path)
-
 
 logger = LoggerClass()

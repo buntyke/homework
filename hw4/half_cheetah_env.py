@@ -1,6 +1,6 @@
 import numpy as np
-import tensorflow as tf
 from gym import utils
+import tensorflow as tf
 from gym.envs.mujoco import mujoco_env
 
 class HalfCheetahEnv(mujoco_env.MujocoEnv, utils.EzPickle):
