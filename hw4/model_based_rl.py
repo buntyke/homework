@@ -12,10 +12,9 @@ from model_based_policy import ModelBasedPolicy
 class ModelBasedRL(object):
 
     def __init__(self, env, num_init_random_rollouts=10, max_rollout_length=500,
-                 num_onplicy_iters=10, num_onpolicy_rollouts=10,
-                 training_epochs=60, training_batch_size=512,
-                 render=False, mpc_horizon=15, num_random_action_selection=4096,
-                 nn_layers=1):
+                 num_onplicy_iters=10, num_onpolicy_rollouts=10, training_epochs=60, 
+                 training_batch_size=512, render=False, mpc_horizon=15, 
+                 num_random_action_selection=4096, nn_layers=1):
 
         # initialize class parameters
         self._env = env
@@ -120,13 +119,14 @@ class ModelBasedRL(object):
         timeit.reset()
         timeit.start('total')
 
-    def run_q1(self):
+    def model_eval(self):
 
         logger.info('Training policy....')
         self._train_policy(self._random_dataset)
 
         logger.info('Evaluating predictions...')
-        for r_num, (states, actions, _, _, _) in enumerate(self._random_dataset.rollout_iterator()):
+        for r_num, (states, actions, _, _, _) in \
+            enumerate(self._random_dataset.rollout_iterator()):
 
             pred_states = []
             for state, action in zip(states, actions):
@@ -135,7 +135,7 @@ class ModelBasedRL(object):
             states = np.asarray(states)
             pred_states = np.asarray(pred_states)
 
-            state_dim = states.shape[1]
+            state_dim = min(states.shape[1],20)
             rows = int(np.sqrt(state_dim))
             cols = state_dim // rows
 
@@ -143,7 +143,7 @@ class ModelBasedRL(object):
             f.suptitle('Model predictions (red) versus ground truth (black)')
 
             for i, (ax, state_i, pred_state_i) in enumerate(zip(axes.ravel(), \
-                    states.T, pred_states.T)):
+                    states[:,:state_dim].T, pred_states[:,:state_dim].T)):
 
                 ax.set_title('state {0}'.format(i))
                 ax.plot(state_i, color='k')
@@ -156,21 +156,7 @@ class ModelBasedRL(object):
 
         logger.info('All plots saved to folder')
 
-    def run_q2(self):
-        logger.info('Random policy')
-        self._log(self._random_dataset)
-
-        logger.info('Training policy....')
-        self._train_policy(self._random_dataset)
-
-        logger.info('Evaluating policy...')
-        eval_dataset = self._gather_rollouts(self._policy, 
-                                             self._num_onpolicy_rollouts)
-
-        logger.info('Trained policy')
-        self._log(eval_dataset)
-
-    def run_q3(self):
+    def train(self):
         dataset = self._random_dataset
 
         itr = -1

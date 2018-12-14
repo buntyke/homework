@@ -21,7 +21,8 @@ for i, exp in enumerate(args.exps):
 
     color = cm.viridis(i / float(len(args.exps)))
     ax.plot(csv['Itr'], csv['ReturnAvg'], color=color, label=exp)
-    ax.fill_between(csv['Itr'], csv['ReturnAvg'] - csv['ReturnStd'], csv['ReturnAvg'] + csv['ReturnStd'],
+    ax.fill_between(csv['Itr'], csv['ReturnAvg'] - csv['ReturnStd'], 
+                    csv['ReturnAvg'] + csv['ReturnStd'],
                     color=color, alpha=0.2)
 
 # add xlabel, ylabel and legend
