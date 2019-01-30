@@ -17,13 +17,15 @@ import tf_util
 import gym
 import load_policy
 
+from IPython.terminal.debugger import set_trace as keyboard
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('expert_policy_file', type=str)
     parser.add_argument('envname', type=str)
     parser.add_argument('--render', action='store_true')
-    parser.add_argument("--max_timesteps", type=int)
+    parser.add_argument('--max_timesteps', type=int)
     parser.add_argument('--num_rollouts', type=int, default=20,
                         help='Number of expert roll outs')
     args = parser.parse_args()
@@ -39,6 +41,7 @@ def main():
         env = gym.make(args.envname)
         max_steps = args.max_timesteps or env.spec.timestep_limit
 
+        dones = []
         returns = []
         observations = []
         actions = []
@@ -53,6 +56,8 @@ def main():
                 observations.append(obs)
                 actions.append(action)
                 obs, r, done, _ = env.step(action)
+                dones.append(done)
+
                 totalr += r
                 steps += 1
                 if args.render:
@@ -67,7 +72,8 @@ def main():
         print('std of return', np.std(returns))
 
         expert_data = {'observations': np.array(observations),
-                       'actions': np.array(actions)}
+                       'actions': np.array(actions), 
+                       'dones': np.array(dones)}
 
         with open(os.path.join('expert_data', args.envname + '.pkl'), 'wb') as f:
             pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
